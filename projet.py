@@ -1,3 +1,5 @@
+from asyncio.proactor_events import _ProactorSocketTransport
+from re import X
 import sys
 import datetime
 from random import *
@@ -13,15 +15,17 @@ from abc import abstractmethod
 ###
 
 # variables for initialisation 
-nbAgents = 50
+nbAgents = 100
 nbTrees = 100
-nbBurningTrees = 5
+nbBurningTrees = 0
 
 probGrowth = 0
-probIgnite = 0.00002
+probIgnite = 0.0000
 probChange = 0.02
 
 probZombieIntelChangeDir = 0.2
+
+ID = 0
 
 ###########################
 ## Parameters: rendering ##
@@ -90,11 +94,14 @@ def loadAllImages() :
     objectType.append(loadImage('assets/Monde/wallHalf_SE_ret.png')) #lateral border far
     objectType.append(loadImage('assets/Monde/wallHalf_NE_ret.png')) #lateral border close
     objectType.append(loadImage('assets/Monde/arrow-ret.png')) #arrow
+    objectType.append(loadImage('assets/Monde/voxelTile_26.png')) #porte
     
     agentType.append(None)
     agentType.append(loadImage('assets/Monde/zombie_walk1.png')) #night walker 
     agentType.append(loadImage('assets/Monde/ninja.png')) #soldier
     agentType.append(loadImage('assets/Monde/archer.png')) #archer
+    agentType.append(loadImage('assets/Monde/transparent_wall.png')) #archer transparent
+
     
 
 def resetImages() : 
@@ -125,6 +132,7 @@ noObjectId = noAgentId = 0
 zombieId = 1
 soldierId = 2
 archerId = 3
+agentTransparentId = 4
 
 grassId = 0
 rockId = 1
@@ -139,6 +147,7 @@ borderId = 7
 latBorderFarId = 8
 latBorderCloseId = 9
 arrowId = 10
+porteId = 11
 
 ###
 
@@ -226,6 +235,11 @@ def setAgentAt(x,y,type, level = 0):
         print ("[ERROR] setObjectMap(.) -- Cannot set object. Level does not exist.")
         return 0
 
+def getAgentById(agents, x, y) :
+    for a in agents: 
+        (x1, y1) = a.getPosition()
+        if x1==x and y1==y:
+            return a
 
 ###########################
 ## CORE/USER : Rendering ##
@@ -264,7 +278,10 @@ def render( it = 0 ):
 
 class Agent:
     def __init__(self,imageId):
+        global ID
         self.type = imageId
+        self.id = ID
+        ID+=1
         self.reset()
         return
     
@@ -289,16 +306,10 @@ class Agent:
             setAgentAt(self.x,self.y,self.type)
         return
 
-    def move2(self,xNew,yNew):
-        success = False
-        if getObjectAt( (self.x+xNew+worldWidth)%worldWidth , (self.y+yNew+worldHeight)%worldHeight ) == 0: # dont move if collide with object (note that negative values means cell cannot be walked on)
-            setAgentAt( self.x, self.y, noAgentId)
-            self.x = ( self.x + xNew + worldWidth ) % worldWidth
-            self.y = ( self.y + yNew + worldHeight ) % worldHeight
-            setAgentAt( self.x, self.y, self.type)
-            success = True
-        return
+    def getId(self):
+        return self.id
 
+        
     def getType(self):
         return self.type
 
@@ -320,7 +331,6 @@ class ArcherAgent(HumanAgent) :
         return
 
     def reset(self) : 
-
         self.x = getWorldWidth()//2 
         self.posarrowx = self.posarrowy = self.posarrowz = 0
         self.y = randint(1,getWorldHeight()-2)
@@ -341,12 +351,12 @@ class ArcherAgent(HumanAgent) :
         (self.posarrowx, self.posarrowy, self.posarrowz) = self.getPosition()
         self.posarrowx+=1
         setObjectAt(self.posarrowx, self.posarrowy, arrowId, self.posarrowz) 
-        self.destarrowx = randint(getWorldHeight()//2 + 1, getWorldHeight()-1) 
+        self.destarrowx = randint(getWorldHeight()//2 + 2, getWorldHeight()-1) 
         self.angle = np.arcsin(math.sin(self.destarrowx / (math.sqrt(self.z*self.z + (self.destarrowx-self.x)*(self.destarrowx-self.x)))))
         self.arrow = pygame.transform.rotate(objectType[arrowId], -math.degrees(self.angle))
 
     def move(self, it = 0):
-
+        
         if it%50==0 :
             self.tirage()
 
@@ -355,14 +365,24 @@ class ArcherAgent(HumanAgent) :
                 setObjectAt(self.posarrowx, self.posarrowy, noObjectId, self.posarrowz)
                 self.posarrowz = self.posarrowz - (self.posarrowz//(self.destarrowx - self.posarrowx))
                 self.posarrowx+=1
-                setObjectAt(self.posarrowx, self.posarrowy, arrowId, self.posarrowz) 
-            
-            
-            
-            
-
-
-        
+                if (self.posarrowz <= 0) :  
+                    if getObjectAt(self.posarrowx, self.posarrowy) == treeId : 
+                        setObjectAt(self.posarrowx, self.posarrowy, burningTreeId)
+                    elif getAgentAt(self.posarrowx, self.posarrowy) == zombieId :
+                        a = getAgentById(zombieAgents, self.posarrowx, self.posarrowy)
+                        zombieAgents.remove(a)
+                        setAgentAt(self.posarrowx, self.posarrowy, noAgentId)
+                    elif getObjectAt(self.posarrowx, self.posarrowy) == noObjectId : 
+                        setObjectAt(self.posarrowx, self.posarrowy, arrowId)
+                else : 
+                        setObjectAt(self.posarrowx, self.posarrowy, arrowId, self.posarrowz) 
+                """    
+                if getObjectAt(self.posarrowx, self.posarrowy, self.posarrowz) != noObjectId and self.posarrowz == 0:
+                    setObjectAt(self.posarrowx, self.posarrowy, noObjectId, self.posarrowz) 
+                else:
+                    setObjectAt(self.posarrowx, self.posarrowy, arrowId, self.posarrowz) 
+                """
+                
 class ZombieAgent(Agent) :
     def reset(self) : 
         self.x = randint(getWorldWidth()//2+1,getWorldWidth()-1)
@@ -391,7 +411,42 @@ class IntelligentZombieAgent(ZombieAgent) :
             setAgentAt(self.x,self.y,self.type)
         return
 
-agents = []
+class Porte: 
+    def __init__(self, x, y, z, imageId):
+        self.type = imageId
+        self.duree = 100
+        self.x = x
+        self.y = y
+        self.z = z
+        setObjectAt(self.x, self.y, self.type, self.z)
+        #self.reset() 
+    
+    def change(self, imageID) : 
+        self.type = imageID
+        setObjectAt(self.x, self.y, self.type, self.z)
+    
+    def verif(self) : 
+        if getAgentAt(self.x+1, self.y) == zombieId : 
+            self.duree-=10
+            if self.duree == 0 :
+                self.type = noObjectId 
+                setObjectAt(self.x, self.y, self.type, self.z)
+        
+    
+    """def reset(self) :
+
+        self.x = getWorldWidth()//2
+        self.y = getWorldHeight()//2
+        self.z = 1 
+        while(self.z <= 4) : 
+            while (self.y <= getWorldHeight()//2 + 1) : 
+                setObjectAt(self.x, self.y, self.type, self.z)
+                self.y+=1
+            self.z+=1
+        """
+humanAgents = []
+zombieAgents = []
+porte = []
 #archeragents = []
 
 ######################
@@ -408,14 +463,33 @@ def initWorld() :
         setObjectAt(r, 0, latBorderFarId)
         setObjectAt(r, getWorldHeight() - 1, latBorderCloseId)
     
+
     # build the wall
     y = (getWorldWidth()) // 2
+    x = getWorldHeight() // 2
     for i in range(0, getViewHeight()) : 
-        for level in range(0, objectMapLevels-2):
-            setObjectAt(y, i, blockId, level)  
-            setObjectAt(y+1, i, blockId, level)  
+        for level in range(0, objectMapLevels-2): 
+            if(i not in [x, x+1, x-1]):
+                setObjectAt(y, i, blockId, level)  
+                setObjectAt(y+1, i, blockId, level)
         setTerrainAt(y, i, rockId)
-        setTerrainAt(y+1, i, rockId)
+        setTerrainAt(y+1, i, rockId)  
+    for i in [x, x+1, x-1] : 
+        for level in range(4, objectMapLevels-2): 
+            setObjectAt(y, i, blockId, level)  
+            setObjectAt(y+1, i, blockId, level) 
+    
+
+    # build the door
+    for i in range(4) :
+        porte.append(Porte(getWorldWidth()//2, getWorldHeight()//2, i, porteId))
+        porte.append(Porte(getWorldWidth()//2, getWorldHeight()//2-1, i, porteId))
+        porte.append(Porte(getWorldWidth()//2, getWorldHeight()//2+1, i, porteId))
+        porte.append(Porte(getWorldWidth()//2+1, getWorldHeight()//2, i, porteId))
+        porte.append(Porte(getWorldWidth()//2+1, getWorldHeight()//2-1, i, porteId))
+        porte.append(Porte(getWorldWidth()//2+1, getWorldHeight()//2+1, i, porteId))
+
+
 
     #spawn the houses
     # add a pyramid-shape building with a tree on top
@@ -479,18 +553,19 @@ def initWorld() :
 def initAgents() :
     # spawn the agents
     for i in range(nbAgents) : 
-        agents.append(IntelligentZombieAgent(zombieId))
-        agents.append(HumanAgent(soldierId))
+        zombieAgents.append(IntelligentZombieAgent(zombieId))
+        humanAgents.append(HumanAgent(soldierId))
 
-    for i in range(5):     
-        agents.append(ArcherAgent(archerId)) 
+    for i in range(getWorldHeight()):     
+       humanAgents.append(ArcherAgent(archerId)) 
+
     
 
 
 def stepWorld( it = 0 ):
     global objectMap, newObjectMap
 
-    if it % (maxFps/10) == 0:
+    if it % (maxFps/5) == 0:
         newObjectMap = objectMap
         for x in range(worldWidth):
             for y in range(worldHeight):
@@ -503,21 +578,31 @@ def stepWorld( it = 0 ):
                         if np.random.rand() < probChange:
                             setNewObjectAt(x, y, burnedTreeId)
 
-                    elif getObjectAt(x,y) == treeId:
+                    elif getObjectAt(x,y) == treeId:                          
                         if np.random.rand() < probIgnite:
                             setNewObjectAt(x, y, burningTreeId)
-                        for neighbours in ((-1,0),(+1,0),(0,-1),(0,+1),(1,-1),(-1,1),(1,1),(-1,-1)):
+                        for neighbours in ((-1,0),(+1,0),(0,-1),(0,+1)):
                             if getObjectAt((x+neighbours[0]+worldWidth) % worldWidth,(y+neighbours[1]+worldHeight) % worldHeight) == burningTreeId:
                                 setNewObjectAt(x,y,burningTreeId)
+                    elif getObjectAt(x, y) == arrowId:
+                        setNewObjectAt(x, y, noObjectId)
+        for p in porte:
+            p.verif()
+        for p in porte:
+            if p.type == noObjectId:
+                porte.remove(p)
+
         objectMap = newObjectMap                        
     return
 
 def stepAgents(it = 0) : 
     if it % (maxFps/5) == 0:
-        for a in agents : 
-            a.move(it)            
-            #a.move2(getWorldHeight()//2, getWorldWidth()//2)
-            
+        for a in humanAgents : 
+            a.move(it)  
+        for a in zombieAgents :
+            a.move(it)
+           #a.move2(getWorldHeight()//2, getWorldWidth()//2)
+        
 
 ##########
 ## Main ##
@@ -533,8 +618,9 @@ it = 0
 running = True
 changeWall = 0
 
-while running: 
 
+while running: 
+    
     render(it)
 
     stepWorld(it)
@@ -573,14 +659,43 @@ while running:
             elif event.key == pygame.K_w :
                 changeWall = 1 - changeWall
                 if changeWall == 1:
-                    id = transBlockId
-                else:
-                    id = blockId
-                y = (getWorldWidth())//2
-                for i in range(0, getViewHeight()) : 
-                    for level in range(0, objectMapLevels-2):
-                        setObjectAt(y, i, id, level) 
-                        setObjectAt(y+1, i, id, level)  
+                    id1 = transBlockId 
+                    id2 = agentTransparentId
+                else : 
+                    id1 = blockId
+                    id2 = archerId
+
+                if id1 == transBlockId : 
+                    y = (getWorldWidth())//2
+                    for i in range(0, getViewHeight()) : 
+                        for level in range(0, objectMapLevels-2):
+                            setObjectAt(y, i, id1, level) 
+                            setObjectAt(y+1, i, id1, level)  
+                    for i in range(0, getWorldHeight()) : 
+                        setAgentAt(y, i, id2, objectMapLevels-2)
+                    
+                else : 
+                    # build the wall again
+                    y = (getWorldWidth()) // 2
+                    x = getWorldHeight() // 2
+                    for i in range(0, getViewHeight()) : 
+                        for level in range(0, objectMapLevels-2): 
+                            if(i not in [x, x+1, x-1]):
+                                setObjectAt(y, i, blockId, level)  
+                                setObjectAt(y+1, i, blockId, level)  
+                    for i in [x, x+1, x-1] : 
+                        for level in range(4, objectMapLevels-2): 
+                            setObjectAt(y, i, blockId, level)  
+                            setObjectAt(y+1, i, blockId, level) 
+                    
+                    #build the door again
+                    for p in porte : 
+                        p.change(porteId)
+                    
+                                
+                    for i in range(0, getWorldHeight()) : 
+                        setAgentAt(y, i, id2, objectMapLevels-2) 
+                    
     it+=1
     pygame.display.flip()
     fpsClock.tick(maxFps) # recommended: 30 fps
