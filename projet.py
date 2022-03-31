@@ -19,7 +19,7 @@ from abc import abstractmethod
 
 # variables for initialisation 
 
-background_image = "ciel.jpg"
+
 
 nbHumans = 25
 nbZombies = 10
@@ -70,7 +70,6 @@ pygame.init()
 fpsClock = pygame.time.Clock()
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption('Game of Thrones') 
-background = pygame.image.load(background_image).convert()
 
 #################################
 ## CORE/USER: image management ##
@@ -784,7 +783,6 @@ while running:
                     
     it+=1
     pygame.display.flip()
-    background = pygame.image.load(background_image).convert()
     fpsClock.tick(maxFps) # recommended: 30 fps
 
 pygame.quit()
