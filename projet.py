@@ -1,3 +1,5 @@
+
+
 from asyncio.proactor_events import _ProactorSocketTransport
 from re import X
 import sys
@@ -5,6 +7,7 @@ import datetime
 from random import *
 import math
 import time
+from turtle import settiltangle
 
 import pygame
 from pygame.locals import *
@@ -15,13 +18,19 @@ from abc import abstractmethod
 ###
 
 # variables for initialisation 
-nbAgents = 100
+
+background_image = "ciel.jpg"
+
+nbHumans = 25
+nbZombies = 10
+nbCleverZombies = 0
 nbTrees = 100
 nbBurningTrees = 0
 
 probGrowth = 0
 probIgnite = 0.0000
 probChange = 0.02
+proGagner = 0.0
 
 probZombieIntelChangeDir = 0.2
 
@@ -61,6 +70,7 @@ pygame.init()
 fpsClock = pygame.time.Clock()
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption('Game of Thrones') 
+background = pygame.image.load(background_image).convert()
 
 #################################
 ## CORE/USER: image management ##
@@ -101,6 +111,8 @@ def loadAllImages() :
     agentType.append(loadImage('assets/Monde/ninja.png')) #soldier
     agentType.append(loadImage('assets/Monde/archer.png')) #archer
     agentType.append(loadImage('assets/Monde/transparent_wall.png')) #archer transparent
+    agentType.append(loadImage('assets/Monde/burningzombie.png')) #burning zombie
+    
 
     
 
@@ -133,6 +145,7 @@ zombieId = 1
 soldierId = 2
 archerId = 3
 agentTransparentId = 4
+burnedZomId = 5
 
 grassId = 0
 rockId = 1
@@ -277,13 +290,14 @@ def render( it = 0 ):
 ############
 
 class Agent:
-    def __init__(self,imageId):
+    def __init__(self,imageId, x = None, y = None):
         global ID
         self.type = imageId
         self.id = ID
         ID+=1
-        self.reset()
+        self.reset(x,y)
         return
+        
     
     @abstractmethod 
     def reset(self):
@@ -293,36 +307,59 @@ class Agent:
         return (self.x,self.y)
 
     def move(self, it = 0): 
+        pass
+
+    def getId(self):
+        return self.id
+
+    def getType(self):
+        return self.type
+
+    def setType(self,imageId) : 
+        self.type = imageId
+    
+
+class HumanAgent(Agent) : 
+    def reset(self, x, y) : 
+        if x != None and y != None : 
+            self.x = x
+            self.y = y
+        else : 
+            self.x = randint(0,getWorldWidth()//2-1)
+            self.y = randint(0,getWorldHeight()-1)
+            while getTerrainAt(self.x,self.y) != 0 or getObjectAt(self.x,self.y) != 0 or getAgentAt(self.x,self.y) != 0:
+                self.x = randint(0,getWorldWidth()//2-1)
+                self.y = randint(0,getWorldHeight()-1)
+            
+        setAgentAt(self.x,self.y,self.type)
+        return
+    
+    def move(self, it = 0): 
         xNew = self.x
         yNew = self.y
-        
-        xNew = ( self.x + [-1,0,+1][randint(0,2)] + getWorldWidth() ) % getWorldWidth()
-        yNew = ( self.y + [-1,0,+1][randint(0,2)] + getWorldHeight() ) % getWorldHeight()
-
+        ###FUITE
+        for neighbours in ((-2,0),(+2,0),(0,-2),(0,+2)):
+            y1 = (yNew+neighbours[0]+worldWidth) % worldWidth
+            x1 = (xNew+neighbours[1]+worldHeight) % worldHeight
+            if getAgentAt(x1,y1) == zombieId:
+                if neighbours[0] < 0 : 
+                    yNew = (yNew+1+worldHeight) % worldHeight
+                elif neighbours[0] > 0 : 
+                    yNew = (yNew-1+worldHeight) % worldHeight
+                elif neighbours[1] < 0 : 
+                    xNew = (xNew+1+worldWidth) % worldWidth
+                elif neighbours[1] > 0 : 
+                    xNew = (xNew-1+worldWidth) % worldWidth
+                break 
+        if xNew == self.x and yNew == self.y :
+            xNew = ( self.x + [-1,0,+1][randint(0,2)] + getWorldWidth() ) % getWorldWidth()
+            yNew = ( self.y + [-1,0,+1][randint(0,2)] + getWorldHeight() ) % getWorldHeight()
         if getObjectAt(xNew,yNew) == 0 and getAgentAt(xNew, yNew) == 0: # dont move if collide with object (note that negative values means cell cannot be walked on)
             setAgentAt(self.x,self.y,noAgentId)
             self.x = xNew
             self.y = yNew
             setAgentAt(self.x,self.y,self.type)
         return
-
-    def getId(self):
-        return self.id
-
-        
-    def getType(self):
-        return self.type
-
-class HumanAgent(Agent) : 
-    def reset(self) : 
-        self.x = randint(0,getWorldWidth()//2-1)
-        self.y = randint(0,getWorldHeight()-1)
-        while getTerrainAt(self.x,self.y) != 0 or getObjectAt(self.x,self.y) != 0 or getAgentAt(self.x,self.y) != 0:
-            self.x = randint(0,getWorldWidth()//2-1)
-            self.y = randint(0,getWorldHeight()-1)
-        setAgentAt(self.x,self.y,self.type)
-        return
-
 class ArcherAgent(HumanAgent) : 
     def __init__(self,imageId):
         self.type = imageId
@@ -369,46 +406,121 @@ class ArcherAgent(HumanAgent) :
                     if getObjectAt(self.posarrowx, self.posarrowy) == treeId : 
                         setObjectAt(self.posarrowx, self.posarrowy, burningTreeId)
                     elif getAgentAt(self.posarrowx, self.posarrowy) == zombieId :
-                        a = getAgentById(zombieAgents, self.posarrowx, self.posarrowy)
-                        zombieAgents.remove(a)
-                        setAgentAt(self.posarrowx, self.posarrowy, noAgentId)
+                        a = getAgentById(zombieAgents, self.posarrowx, self.posarrowy) 
+                        a.setType(burnedZomId)
                     elif getObjectAt(self.posarrowx, self.posarrowy) == noObjectId : 
                         setObjectAt(self.posarrowx, self.posarrowy, arrowId)
                 else : 
                         setObjectAt(self.posarrowx, self.posarrowy, arrowId, self.posarrowz) 
-                """    
-                if getObjectAt(self.posarrowx, self.posarrowy, self.posarrowz) != noObjectId and self.posarrowz == 0:
-                    setObjectAt(self.posarrowx, self.posarrowy, noObjectId, self.posarrowz) 
-                else:
-                    setObjectAt(self.posarrowx, self.posarrowy, arrowId, self.posarrowz) 
-                """
                 
 class ZombieAgent(Agent) :
-    def reset(self) : 
-        self.x = randint(getWorldWidth()//2+1,getWorldWidth()-1)
-        self.y = randint(0,getWorldHeight()-1)
-        while getTerrainAt(self.x,self.y) != 0 or getObjectAt(self.x,self.y) != 0 or getAgentAt(self.x,self.y) != 0:
+    def reset(self, x, y) :
+        self.burningDays = 3
+        if x != None and y != None : 
+            self.x = x
+            self.y = y
+        else :  
             self.x = randint(getWorldWidth()//2+1,getWorldWidth()-1)
             self.y = randint(0,getWorldHeight()-1)
-        setAgentAt(self.x,self.y,self.type)
+            while getTerrainAt(self.x,self.y) != 0 or getObjectAt(self.x,self.y) != 0 or getAgentAt(self.x,self.y) != 0:
+                self.x = randint(getWorldWidth()//2+1,getWorldWidth()-1)
+                self.y = randint(0,getWorldHeight()-1)
+        setAgentAt(self.x,self.y, self.type)
         return
+        
+    def decrementeDays(self):
+        self.burningDays-=1
+    
+    def move(self, it = 0):
+        
+        xNew = self.x
+        yNew = self.y
+        ###DUEL
+        for neighbours in ((-1,0),(+1,0),(0,-1),(0,+1)):
+            x1 = (xNew+neighbours[0]+worldWidth) % worldWidth
+            y1 = (yNew+neighbours[1]+worldHeight) % worldHeight
+            if getAgentAt(x1,y1) == soldierId:
+               
+                if random() > proGagner : # le zombie a gagne
+                    a = getAgentById(humanAgents, x1, y1)
+                    humanAgents.remove(a)
+                    #setObjectAt(xNew, yNew, noAgentId)
+                    z = ZombieAgent(zombieId, x1, y1) 
+                    zombieAgents.append(z) 
+                else : # le zombie a perdu 
+                    z = getAgentById(zombieAgents, xNew, yNew)
+                    z.setType(burnedZomId)
+                
+        else:
+            ###CHASSE
+            for neighbours in ((-2,0),(+2,0),(0,-2),(0,+2)): #il regarde le voisinage
+                y1 = (yNew+neighbours[0]+worldWidth) % worldWidth
+                x1 = (xNew+neighbours[1]+worldHeight) % worldHeight
+                if getAgentAt(x1,y1) == soldierId:
+                    if neighbours[0] < 0 : 
+                        yNew = (yNew-1+worldHeight) % worldHeight
+                    elif neighbours[0] > 0 : 
+                        yNew = (yNew+1+worldHeight) % worldHeight
+                    elif neighbours[1] < 0 : 
+                        xNew = (xNew-1+worldWidth) % worldWidth
+                    elif neighbours[1] > 0 : 
+                        xNew = (xNew+1+worldWidth) % worldWidth
+                    break 
+            ###Si tu ne chasses pas, bouge au hasard
+            if xNew == self.x and yNew == self.y :
+                xNew = ( self.x + [-1,0,+1][randint(0,2)] + getWorldWidth() ) % getWorldWidth()
+                yNew = ( self.y + [-1,0,+1][randint(0,2)] + getWorldHeight() ) % getWorldHeight()
+
+            if getObjectAt(xNew,yNew) == 0 and getAgentAt(xNew, yNew) == 0: # dont move if collide with object (note that negative values means cell cannot be walked on)
+                setAgentAt(self.x,self.y,noAgentId)
+                self.x = xNew
+                self.y = yNew
+                setAgentAt(self.x,self.y,self.type)
+        return
+    
 
 class IntelligentZombieAgent(ZombieAgent) :
     def move(self, it = 0) :
         xNew = self.x
         yNew = self.y
-        
-        if random() > probZombieIntelChangeDir: # vers le mur
-            xNew = self.x - 1 
-        else : 
-            xNew = ( self.x + [-1,0,+1][randint(0,2)] + getWorldWidth() ) % getWorldWidth()
-            yNew = ( self.y + [-1,0,+1][randint(0,2)] + getWorldHeight() ) % getWorldHeight()
 
-        if getObjectAt(xNew,yNew) == 0 and getAgentAt(xNew, yNew) == 0: # dont move if collide with object (note that negative values means cell cannot be walked on)
-            setAgentAt(self.x,self.y,noAgentId)
-            self.x = xNew
-            self.y = yNew
-            setAgentAt(self.x,self.y,self.type)
+        ###DUEL
+        for neighbours in ((-1,0),(+1,0),(0,-1),(0,+1)):
+            x1 = (xNew+neighbours[0]+worldWidth) % worldWidth
+            y1 = (yNew+neighbours[1]+worldHeight) % worldHeight
+            if getAgentAt(x1,y1) == soldierId:
+               
+                if random() > proGagner : # le zombie a gagne
+                    a = getAgentById(humanAgents, x1, y1)
+                    humanAgents.remove(a)
+                    #setObjectAt(xNew, yNew, noAgentId)
+                    z = ZombieAgent(zombieId, x1, y1) 
+                    zombieAgents.append(z) 
+                else : # le zombie a perdu 
+                    z = getAgentById(zombieAgents, xNew, yNew)
+                    z.setType(burnedZomId)
+                
+        else:
+                  
+            for neighbours in ((-2,0),(+2,0),(0,-2),(0,+2)): #il regarde le voisinage
+                if getAgentAt((xNew+neighbours[0]+worldWidth) % worldWidth,(yNew+neighbours[1]+worldHeight) % worldHeight) == soldierId:
+                    xNew=xNew+neighbours[0]
+                    yNew=yNew+neighbours[1]
+                    break
+
+            if xNew == self.x and yNew == self.y :
+
+                if random() > probZombieIntelChangeDir: # vers le mur
+                    xNew = self.x - 1 
+                else : 
+                    xNew = ( self.x + [-1,+1][randint(0,1)] + getWorldWidth() ) % getWorldWidth()
+                    yNew = ( self.y + [-1,+1][randint(0,1)] + getWorldHeight() ) % getWorldHeight()
+
+                if getObjectAt(xNew,yNew) == 0 and getAgentAt(xNew, yNew) == 0: # dont move if collide with object (note that negative values means cell cannot be walked on)
+                    setAgentAt(self.x,self.y,noAgentId)
+                    self.x = xNew
+                    self.y = yNew
+                    setAgentAt(self.x,self.y,self.type)
         return
 
 class Porte: 
@@ -419,7 +531,6 @@ class Porte:
         self.y = y
         self.z = z
         setObjectAt(self.x, self.y, self.type, self.z)
-        #self.reset() 
     
     def change(self, imageID) : 
         self.type = imageID
@@ -432,18 +543,6 @@ class Porte:
                 self.type = noObjectId 
                 setObjectAt(self.x, self.y, self.type, self.z)
         
-    
-    """def reset(self) :
-
-        self.x = getWorldWidth()//2
-        self.y = getWorldHeight()//2
-        self.z = 1 
-        while(self.z <= 4) : 
-            while (self.y <= getWorldHeight()//2 + 1) : 
-                setObjectAt(self.x, self.y, self.type, self.z)
-                self.y+=1
-            self.z+=1
-        """
 humanAgents = []
 zombieAgents = []
 porte = []
@@ -467,7 +566,7 @@ def initWorld() :
     # build the wall
     y = (getWorldWidth()) // 2
     x = getWorldHeight() // 2
-    for i in range(0, getViewHeight()) : 
+    for i in range(0, getWorldHeight()) : 
         for level in range(0, objectMapLevels-2): 
             if(i not in [x, x+1, x-1]):
                 setObjectAt(y, i, blockId, level)  
@@ -489,43 +588,6 @@ def initWorld() :
         porte.append(Porte(getWorldWidth()//2+1, getWorldHeight()//2-1, i, porteId))
         porte.append(Porte(getWorldWidth()//2+1, getWorldHeight()//2+1, i, porteId))
 
-
-
-    #spawn the houses
-    # add a pyramid-shape building with a tree on top
-    building2TerrainMap = [
-    [ 0, 4, 4, 4, 4, 4, 0 ],
-    [ 4, 4, 4, 4, 4, 4, 4 ],
-    [ 4, 4, 4, 4, 4, 4, 4 ],
-    [ 4, 4, 4, 4, 4, 4, 4 ],
-    [ 4, 4, 4, 4, 4, 4, 4 ],
-    [ 4, 4, 4, 4, 4, 4, 4 ],
-    [ 4, 4, 4, 4, 4, 4, 4 ],
-    [ 4, 4, 4, 4, 4, 4, 4 ],
-    [ 0, 4, 4, 4, 4, 4, 0 ]
-    ]
-    building2HeightMap = [
-    [ 0, 1, 1, 1, 1, 1, 0 ],
-    [ 1, 1, 1, 1, 1, 1, 1 ],
-    [ 1, 2, 2, 2, 2, 2, 1 ],
-    [ 1, 2, 3, 3, 3, 2, 1 ],
-    [ 1, 2, 3, 4, 3, 2, 1 ],
-    [ 1, 2, 3, 3, 3, 2, 1 ],
-    [ 1, 2, 2, 2, 2, 2, 1 ],
-    [ 1, 1, 1, 1, 1, 1, 1 ],
-    [ 0, 1, 1, 1, 1, 1, 0 ]
-    ]
-    x_offset = 4
-    y_offset = 13
-    for x in range( len( building2TerrainMap[0] ) ):
-        for y in range( len( building2TerrainMap ) ):
-            setObjectAt( x+x_offset, y+y_offset, building2TerrainMap[y][x] , building2HeightMap[y][x]-1)
-            
-    setObjectAt( x_offset+3, y_offset+4, treeId , 4)
-    setObjectAt( x_offset+10, y_offset+10, homeId)
-    
-    
-    #setObjectAt(10,10,homeId)
 
     #make trees
     h = getWorldHeight()
@@ -551,13 +613,22 @@ def initWorld() :
     return
 
 def initAgents() :
+
     # spawn the agents
-    for i in range(nbAgents) : 
-        zombieAgents.append(IntelligentZombieAgent(zombieId))
+    for i in range(nbHumans) : 
         humanAgents.append(HumanAgent(soldierId))
 
+    #spawn the archers
     for i in range(getWorldHeight()):     
        humanAgents.append(ArcherAgent(archerId)) 
+    #spawn stupid zombies
+    for i in range(nbZombies) :
+        zombieAgents.append(ZombieAgent(zombieId))
+    
+    #spawn clever zombies
+    for i in range(nbCleverZombies) :
+        zombieAgents.append(IntelligentZombieAgent(zombieId))
+
 
     
 
@@ -585,7 +656,8 @@ def stepWorld( it = 0 ):
                             if getObjectAt((x+neighbours[0]+worldWidth) % worldWidth,(y+neighbours[1]+worldHeight) % worldHeight) == burningTreeId:
                                 setNewObjectAt(x,y,burningTreeId)
                     elif getObjectAt(x, y) == arrowId:
-                        setNewObjectAt(x, y, noObjectId)
+                        setNewObjectAt(x, y, noObjectId) 
+                    
         for p in porte:
             p.verif()
         for p in porte:
@@ -596,12 +668,26 @@ def stepWorld( it = 0 ):
     return
 
 def stepAgents(it = 0) : 
+    global zombieAgents
     if it % (maxFps/5) == 0:
-        for a in humanAgents : 
-            a.move(it)  
+             
         for a in zombieAgents :
-            a.move(it)
-           #a.move2(getWorldHeight()//2, getWorldWidth()//2)
+            a.move(it) 
+            (x,y) = a.getPosition()
+            if a.getType() == burnedZomId: 
+                if a.burningDays == 0:
+                    a = getAgentById(zombieAgents, x, y)
+                    zombieAgents.remove(a)
+                    setAgentAt(x, y, noAgentId)
+                else:
+                    a.decrementeDays()
+                
+        for a in humanAgents : 
+            a.move(it) 
+
+        
+
+    
         
 
 ##########
@@ -698,6 +784,7 @@ while running:
                     
     it+=1
     pygame.display.flip()
+    background = pygame.image.load(background_image).convert()
     fpsClock.tick(maxFps) # recommended: 30 fps
 
 pygame.quit()
