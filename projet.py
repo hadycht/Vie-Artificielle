@@ -724,28 +724,29 @@ class IntelligentZombieAgent(ZombieAgent):
         ##SI IL NE CHASSE PAS OU IL N'EST PAS DANS UN DUEL, ALORS ATTAQUE LE MUR POUR LE BRISER
         m = getWorldHeight() // 2
         if xNew == self.x and yNew == self.y :
-            r = random()
-            
-            if r < probZombieIntelChangeDir and not PorteBrise: # vers le mur quand il est entouré pas des objets ou des agents, et qu'il ne peut pas bouger 
+            if random() < probZombieIntelChangeDir and not PorteBrise: # vers le mur quand il est entouré pas des objets ou des agents, et qu'il ne peut pas bouger 
                 xNew = self.x - 1 
                 if(self.y not in [m, m+1, m-1]):
                     if(self.y >= getWorldHeight() // 2):
                         yNew = self.y - 1
                     elif(self.y < getWorldHeight() // 2):
                         yNew = self.y + 1 
-            elif r < probZombieIntelChangeDir and PorteBrise :
+            elif PorteBrise and random() < probZombieIntelChangeDir: 
                 if self.y not in [m, m+1, m-1] and self.x >= getWorldWidth()//2: # il n'est pas bien aligne tel qu'il entre et il se trouve encore dans le territoire des zombies
                     xNew = ( self.x + [-1,0,+1][randint(0,2)] + getWorldWidth() ) % getWorldWidth()
                     if(self.y >= getWorldHeight() // 2):
                         yNew = self.y - 1
                     elif(self.y < getWorldHeight() // 2):
                         yNew = self.y + 1   
-                elif not (self.x < getWorldWidth()//2) : # ce else est: soit il est bien aligne, soit il est dans le territoire des humains
+                elif self.y in [m, m+1, m-1] and self.x >= getWorldWidth()//2 : #si il est aligné mais il est dans l'endroit 
+                    xNew = self.x - 1
+                elif self.x < getWorldWidth()//2 : # ce else: il est dans le territoire des humains
                     xNew = self.x -1
                     yNew = ( self.y + [-1,0,+1][randint(0,2)] + getWorldHeight() ) % getWorldHeight()
             else :  # il bouge au hasard, pour ne pas etre bloques 
                 xNew = ( self.x + [-1,0,+1][randint(0,2)] + getWorldWidth() ) % getWorldWidth()
                 yNew = ( self.y + [-1,0,+1][randint(0,2)] + getWorldHeight() ) % getWorldHeight()
+            
             
 
         if getObjectAt(xNew,yNew) in [noObjectId, foodId] and getAgentAt(xNew, yNew) == 0: # dont move if collide with object (note that negative values means cell cannot be walked on)
