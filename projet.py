@@ -37,11 +37,19 @@ from abc import abstractmethod
 ## Parameters: initialisation ##
 ################################
 
+<<<<<<< HEAD
 nbHumans = 100
 nbZombies = 50
 nbCleverZombies = 30
 nbTrees = 800# pas inferieur a 2*(worldWidth//2+1) + worldHeight-2
 nbBurningTrees = 10
+=======
+nbHumans = 30
+nbZombies = 20
+nbCleverZombies = 10
+nbTrees = 250# pas inferieur a 2*(worldWidth//2+1) + worldHeight-2
+nbBurningTrees = 0
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
 
 probGrowth = 0.0001 #probabilité qu'un arbre se pousse
 probIgnite = 0.001 #probabilité qu'un arbre se met en feu tt seul
@@ -50,14 +58,21 @@ proGagner = 0.0 #probabilité qu'un humain gagne le duel contre un zombie
 probGendre = 0.5 #probabilité du genre (Masculain ou féminin)
 probReproduction = 1 #probabilité de reproduction
 probZombieIntelChangeDir = 0.8 #probabilité qu'un zombie intelligent change de direction quand il est bloqué
+<<<<<<< HEAD
 probPluie = 0.00
+=======
+probPluie = 0.02
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
 probRegrowth = 0.001
 ID = 0 
 LaunchOrder = 0 #Ordre de Lancer des flèches
 PorteBrise = False #Porte Brisée 
 Pluie = False
 nbFoisPluie = 500
+<<<<<<< HEAD
 afficheEnergie = False
+=======
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
 
 ###########################
 ## Parameters: rendering ##
@@ -94,7 +109,10 @@ fpsClock = pygame.time.Clock()
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption('Game of Thrones') 
 bg = pygame.image.load("assets/Monde/ciel1.jpg")
+<<<<<<< HEAD
 font = pygame.font.SysFont('Times New Roman', 15)
+=======
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
 
 #################################
 ## CORE/USER: image management ##
@@ -116,6 +134,8 @@ def loadAllImages() :
     #tileType.append(loadImage('assets/Monde/voxelTile_55.png')) #grass
     tileType.append(loadImage('assets/Monde/platformerTile_48_ret.png')) #grass
     tileType.append(loadImage('assets/Monde/voxelTile_53.png')) #rock tile
+    tileType.append(loadImage('assets/Monde/landscape_32.png')) #road tile
+
 
 
     objectType.append(None)
@@ -131,6 +151,7 @@ def loadAllImages() :
     objectType.append(loadImage('assets/Monde/arrow-ret.png')) #arrow
     objectType.append(loadImage('assets/Monde/voxelTile_26.png')) #porte
     objectType.append(loadImage('assets/Monde/turkey_NW.png')) #food
+<<<<<<< HEAD
     objectType.append(None) #building
     objectType.append(loadImage('assets/Monde/tower_40.png')) #tower
     objectType.append(loadImage('assets/Monde/tent.png')) #tent
@@ -149,6 +170,19 @@ def loadAllImages() :
     agentType.append(loadImage('assets/Monde/archer2.png')) #archer
     agentType.append(loadImage('assets/Monde/transparent_wall.png')) #archer transparent
     agentType.append(loadImage('assets/Monde/zomb1.png')) #burning zombie
+=======
+    objectType.append(loadImage('assets/Monde/blockHuge_N_ret.png')) #building
+    objectType.append(loadImage('assets/Monde/tower_40.png')) #tower
+
+
+
+    agentType.append(None)
+    agentType.append(loadImage('assets/Monde/zom.png')) #night walker 
+    agentType.append(loadImage('assets/Monde/V.png')) #MaleAdventurer
+    agentType.append(loadImage('assets/Monde/archer2.png')) #archer
+    agentType.append(loadImage('assets/Monde/transparent_wall.png')) #archer transparent
+    agentType.append(loadImage('assets/Monde/zombie.png')) #burning zombie
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
     agentType.append(loadImage('assets/Monde/f.png')) #FemaleAdventurer
 
 def resetImages() : 
@@ -187,6 +221,7 @@ femaleId = 6
 # TERRAIN
 grassId = 0
 rockId = 1
+roadLId = 2
 
 # OBJETS
 treeId = 1
@@ -203,6 +238,7 @@ porteId = 11
 foodId = 12
 buildingId = 13
 towerId = 14
+<<<<<<< HEAD
 tentId = 15
 campfireId = 16
 signpostId = 17
@@ -213,6 +249,8 @@ towertopId = 21
 prettyrockId = 22
 
 
+=======
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
 
 ###
 
@@ -430,6 +468,7 @@ class HumanAgent(Agent) :
                         xNew = (xNew-1+worldWidth) % worldWidth
                     break  
 
+<<<<<<< HEAD
             if xNew == self.x and yNew == self.y :  
                 ### LOOK FOR FOOOOOD
                 for neighbours in ((-1,0),(+1,0),(0,-1),(0,+1),(-1,-1),(-1,1),(1,-1),(1,1)):
@@ -462,6 +501,37 @@ class HumanAgent(Agent) :
                                         break
 
             if xNew == self.x and yNew == self.y :  
+=======
+                
+            ### LOOK FOR FOOOOOD
+            for neighbours in ((-1,0),(+1,0),(0,-1),(0,+1),(-1,-1),(-1,1),(1,-1),(1,1)):
+                y1 = (yNew + neighbours[0] + worldWidth) % worldWidth
+                x1 = (xNew + neighbours[1] + worldHeight) % worldHeight
+                if getObjectAt(x1, y1) == foodId:
+                    xNew = x1
+                    yNew = y1
+                    setObjectAt(x1, y1, noObjectId)
+                    self.energie += 10
+                    break
+        
+            ### REPRODUCTION
+            if random() < probReproduction and self.energie > 50 : 
+                for neighbours in ((-1,0),(+1,0),(0,-1),(0,+1)): 
+                    y1 = (yNew + neighbours[0] + worldWidth) % worldWidth
+                    x1 = (xNew + neighbours[1] + worldHeight) % worldHeight
+                    if (getAgentAt(x1, y1) in [maleId, femaleId]) :
+                        a = getAgentByPos(humanAgents, x1, y1) 
+                        if (self.getType() != a.getType() and a.energie > 50) : 
+                                #if getAgentAt(x1+1, y1) == noAgentId and getObjectAt(x1+1, y1) == noObjectId: 
+                                if random() > probGendre : 
+                                    humanAgents.append(HumanAgent(maleId, xNew, yNew, (self.energie//2 + a.energie//2)))
+                                else : 
+                                    humanAgents.append(HumanAgent(femaleId, xNew, yNew, self.energie//2 + a.energie//2))
+                                self.energie //= 2
+                                a.energie //= 2
+            
+            if xNew == self.x and yNew == self.y :
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
                 xNew = ( self.x + [-1,0,+1][randint(0,2)] + getWorldWidth() ) % getWorldWidth()
                 yNew = ( self.y + [-1,0,+1][randint(0,2)] + getWorldHeight() ) % getWorldHeight()
             
@@ -732,7 +802,11 @@ class ParticlePrinciple:
 	def add_particles(self): 
 		pos_x = randint(0, screenWidth)
 		pos_y = randint(0, screenHeight)
+<<<<<<< HEAD
 		radius = 5
+=======
+		radius = 10
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
 		direction = 1
 		particle_circle = [[pos_x,pos_y],radius,direction]
 		self.particles.append(particle_circle)
@@ -774,6 +848,7 @@ def initWorld() :
         setObjectAt(1, getWorldHeight()//2-2+i,buildingId,objectMapLevels-1)
         setObjectAt(6, getWorldHeight()//2+2+i,buildingId,objectMapLevels-1)
     """
+<<<<<<< HEAD
     # spawn pretty rocks
     count = 0
     while(count < 20):
@@ -843,14 +918,33 @@ def initWorld() :
             setObjectAt(0, i, towerId, l)
 
     for l in range(objectMapLevels//2) : 
+=======
+    
+    # make village
+
+    setTerrainAt(10, 19, rockId)
+
+    # make human side borders
+    for l in range(objectMapLevels//3) : 
+        for i in range(getWorldHeight()) :
+            setObjectAt(0, i, towerId, l)
+
+    for l in range(objectMapLevels//3) : 
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
         for r in range(getWorldWidth()//2) :
             setObjectAt(r, 0, towerId, l)
             setObjectAt(r, getWorldHeight() - 1, towerId, l)
     
     for i in range(getWorldHeight()) :
+<<<<<<< HEAD
         setObjectAt(0, i, borderId, objectMapLevels//2)
     for r in range(getWorldWidth()//2) :
         setObjectAt(r, 0, latBorderFarId, objectMapLevels//2)
+=======
+        setObjectAt(0, i, borderId, objectMapLevels//3)
+    for r in range(getWorldWidth()//2) :
+        setObjectAt(r, 0, latBorderFarId, objectMapLevels//3)
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
         setObjectAt(r, getWorldHeight() - 1, latBorderCloseId, objectMapLevels//3)
     
     # build the wall
@@ -1147,8 +1241,11 @@ while running:
                 it = -1
             elif event.key == pygame.K_s : 
                 LaunchOrder = 0
+<<<<<<< HEAD
             elif event.key == pygame.K_e : 
                 afficheEnergie = not afficheEnergie
+=======
+>>>>>>> 25b55e802b45126ed2ca498648ac6c6c195b273c
         elif event.type == PARTICLE_EVENT and Pluie:
             for i in range(nbFoisPluie):
                 particle1.add_particles()
