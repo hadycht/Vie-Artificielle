@@ -15,7 +15,7 @@ Snapshot
 ========
 
 
-![Wofi screenshot](https://github.com/Hady31-upmc/Projet-Dev/main/data/blop/screenshot.png)
+![Wofi screenshot](https://github.com/Hady31-upmc/Projet-Dev/blop/main/data/screenshot.png)
 
 
 
