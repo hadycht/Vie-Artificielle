@@ -15,7 +15,7 @@ Snapshot
 ========
 
 
-![Wofi screenshot](https://github.com/Hady31-upmc/Projet-Dev/main/assets/Monde/screenshot.png)
+![Wofi screenshot](https://github.com/Hady31-upmc/Projet-Dev/main/assets/data/screenshot.png)
 
 
 
