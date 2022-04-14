@@ -826,29 +826,6 @@ porte = []
 
 def initWorld() : 
     global nbTrees 
-    """
-    for c in [(1,20),(11,20),(11,30),(1,30)]:
-        for level in range(0,objectMapLevels):
-            setObjectAt(c[0],c[1],buildingId,level)
-    for i in range(10):
-        setObjectAt(2+i,20,buildingId,objectMapLevels-1)
-        setObjectAt(2+i,30,buildingId,objectMapLevels-1)
-        setObjectAt(1,20+i,buildingId,objectMapLevels-1)
-        setObjectAt(11,20+i,buildingId,objectMapLevels-1)
-    # make the trap
-    """
-    """
-    #   for c in [(getWorldHeight()//2-2,1),(getWorldHeight()+2,1),(getWorldHeight()/2+2,6),(getWorldHeight()/2+2,6)]:
-    for c in [(1,getWorldHeight()//2-2),(1,getWorldHeight()//2+2),(6, getWorldHeight()//2-2),(6, getWorldHeight()//2+2)]:
-        for level in range(0,objectMapLevels-1):
-            setObjectAt(c[0],c[1],buildingId,level)
-    
-    for i in range(5):
-        setObjectAt(2+i,getWorldHeight()//2-2,buildingId,objectMapLevels-1)
-        setObjectAt(7+i,getWorldHeight()//2+2,buildingId,objectMapLevels-1)
-        setObjectAt(1, getWorldHeight()//2-2+i,buildingId,objectMapLevels-1)
-        setObjectAt(6, getWorldHeight()//2+2+i,buildingId,objectMapLevels-1)
-    """
 <<<<<<< HEAD
     # spawn pretty rocks
     count = 0
@@ -858,7 +835,8 @@ def initWorld() :
         #if getObjectAt(xp, randint(getWorldHeight()-1) == noObjectId:
         setObjectAt(xp, yp, prettyrockId)
         count+=1
-
+	
+    #Le village est uniquement valable pour la dimension 64*64, en cas d'utilisation d'autres dimensions, merci de commenter. 
     # make village
     x_offset = 1
     y_offset = 1
