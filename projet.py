@@ -1108,7 +1108,7 @@ def stepWorld( it = 0 ):
         #REGARDER SI LA PORTE EST BRISE OU PAS
         m = getWorldHeight() // 2
         n = getWorldWidth() // 2 
-        if getObjectAt(m, n) == noObjectId or getObjectAt(m-1, n) == noObjectId or getObjectAt(m+1, n) == noObjectId:
+        if getObjectAt(m, n) == noObjectId and getObjectAt(m-1, n) == noObjectId and getObjectAt(m+1, n) == noObjectId:
             PorteBrise = True
 
         #print(len(porte))
