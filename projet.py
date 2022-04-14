@@ -1,27 +1,8 @@
-"""
-TO DO:
-- big boss fight (maybe) + death of the archer agents
-- search images 
-- design world
-- split files -> impossible man
-- continue archer (head) + archers without humans
-- energy for humans
-- zombies who go missing just like that 
-- buildings
-
-"""
-
-###
-
-#from asyncio.proactor_events import _ProactorSocketTransport
-#from lib2to3.pygram import python_grammar_no_print_statement
-#from re import X
 import sys
 import datetime
 from random import *
 import math
 import time
-#from turtle import settiltangle
 
 from matplotlib.pyplot import get
 
